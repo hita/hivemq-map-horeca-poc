@@ -3,4 +3,5 @@ esp32/src/secrets.h
 esp32/.pio/
 certs/server.key
 certs/hivemq.p12
+certs/ca_cert.pem
 .DS_Store
