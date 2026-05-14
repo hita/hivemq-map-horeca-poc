@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<hivemq>
+
+    <listeners>
+        <!-- Plaintext: útil para test inicial, comentar en producción -->
+        <tcp-listener>
+            <port>1883</port>
+            <bind-address>0.0.0.0</bind-address>
+        </tcp-listener>
+
+        <!-- TLS: producción -->
+        <tls-tcp-listener>
+            <port>8883</port>
+            <bind-address>0.0.0.0</bind-address>
+            <tls>
+                <keystore>
+                    <path>/opt/hivemq/certs/hivemq.p12</path>
+                    <password>jamonero2026</password>
+                    <private-key-password>jamonero2026</private-key-password>
+                </keystore>
+                <protocols>
+                    <protocol>TLSv1.3</protocol>
+                    <protocol>TLSv1.2</protocol>
+                </protocols>
+            </tls>
+        </tls-tcp-listener>
+    </listeners>
+
+    <!-- Control Center web UI -->
+    <control-center>
+        <listeners>
+            <http>
+                <port>8080</port>
+                <bind-address>0.0.0.0</bind-address>
+            </http>
+        </listeners>
+    </control-center>
+
+    <!-- Restricción por tópico: sólo permite el schema de Jamonero -->
+    <security>
+        <allow-empty-client-id>
+            <enabled>false</enabled>
+        </allow-empty-client-id>
+        <utf8-validation>
+            <enabled>true</enabled>
+        </utf8-validation>
+    </security>
+
+</hivemq>

@@ -1,0 +1,21 @@
+services:
+  hivemq:
+    image: hivemq/hivemq-ce:latest
+    container_name: hivemq-jamonero
+    ports:
+      - "1883:1883"   # MQTT plaintext (disable after testing)
+      - "8883:8883"   # MQTT over TLS
+      - "8080:8080"   # Control Center UI
+    volumes:
+      - ./config:/opt/hivemq/conf
+      - ./certs:/opt/hivemq/certs
+      - hivemq-data:/opt/hivemq/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  hivemq-data:
