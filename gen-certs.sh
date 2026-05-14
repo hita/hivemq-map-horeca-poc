@@ -1,9 +1,9 @@
 #!/bin/bash
-# Genera certificado self-signed para HiveMQ TLS
-# Ejecutar en el VPS: bash gen-certs.sh <IP_O_DOMINIO_DEL_VPS>
+# Generates a self-signed certificate for HiveMQ TLS
+# Run on the VPS: bash gen-certs.sh <VPS_IP_OR_DOMAIN>
 #
-# Ejemplo: bash gen-certs.sh 123.45.67.89
-#          bash gen-certs.sh mqtt.tudominio.com
+# Example: bash gen-certs.sh 123.45.67.89
+#          bash gen-certs.sh mqtt.yourdomain.com
 
 set -e
 
@@ -11,11 +11,11 @@ HOST=${1:-"mqtt.jamonero.local"}
 CERT_DIR="./certs"
 PASSWORD="jamonero2026"
 
-echo "Generando certificados para: $HOST"
+echo "Generating certificates for: $HOST"
 
 mkdir -p "$CERT_DIR"
 
-# 1. Generar clave privada + certificado self-signed
+# 1. Generate private key + self-signed certificate
 openssl req -x509 -newkey rsa:4096 \
     -keyout "$CERT_DIR/server.key" \
     -out "$CERT_DIR/server.crt" \
@@ -28,7 +28,7 @@ openssl req -x509 -newkey rsa:4096 \
     -days 825 -nodes \
     -subj "/C=ES/ST=Andalucia/L=Sevilla/O=Jamonero/CN=$HOST"
 
-# 2. Convertir a PKCS12 (formato que acepta HiveMQ)
+# 2. Convert to PKCS12 (native format accepted by HiveMQ)
 openssl pkcs12 -export \
     -in "$CERT_DIR/server.crt" \
     -inkey "$CERT_DIR/server.key" \
@@ -36,14 +36,14 @@ openssl pkcs12 -export \
     -name hivemq \
     -passout "pass:$PASSWORD"
 
-# 3. Extraer el certificado en formato PEM para el ESP32
+# 3. Extract certificate in PEM format for the ESP32
 cp "$CERT_DIR/server.crt" "$CERT_DIR/ca_cert.pem"
 
 echo ""
-echo "Certificados generados en $CERT_DIR:"
-echo "  hivemq.p12  → HiveMQ TLS (montar en container)"
-echo "  ca_cert.pem → copiar al sketch del ESP32"
+echo "Certificates generated in $CERT_DIR:"
+echo "  hivemq.p12  → HiveMQ TLS (mount in container)"
+echo "  ca_cert.pem → copy to ESP32 sketch"
 echo ""
-echo "Contenido de ca_cert.pem (para pegar en main.cpp):"
+echo "Contents of ca_cert.pem (paste into main.cpp):"
 echo "---"
 cat "$CERT_DIR/ca_cert.pem"

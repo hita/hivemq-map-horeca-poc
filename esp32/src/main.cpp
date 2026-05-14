@@ -5,17 +5,17 @@
 #include <ArduinoJson.h>
 #include "secrets.h"
 
-// ─── Configuración ───────────────────────────────────────────────────────────
-// WIFI_SSID y WIFI_PASSWORD vienen de secrets.h
+// ─── Configuration ───────────────────────────────────────────────────────────
+// WIFI_SSID and WIFI_PASSWORD are defined in secrets.h
 
 const char* MQTT_HOST     = "187.124.36.17";
 const int   MQTT_PORT     = 8883;
 const char* DEVICE_ID     = "device001";
-const char* MQTT_USER     = "";   // vacío si no hay autenticación configurada
+const char* MQTT_USER     = "";   // empty if no authentication configured
 const char* MQTT_PASS     = "";
 
-// Certificado del servidor (pegar output de gen-certs.sh → ca_cert.pem)
-// Pegar entre los R"(   )" sin modificar saltos de línea
+// Server certificate (paste output of gen-certs.sh → ca_cert.pem)
+// Paste between R"(   )" without modifying line breaks
 const char* CA_CERT = R"(
 -----BEGIN CERTIFICATE-----
 MIIFvTCCA6WgAwIBAgIUYym9pFDjosOluiJpa5fl/xiSvdswDQYJKoZIhvcNAQEL
@@ -52,14 +52,14 @@ FTBcsPzrAWcHVC6pyO736cx61aCEE2V/AVdF79rXpaVA
 -----END CERTIFICATE-----
 )";
 
-// ─── Tópicos Jamonero ────────────────────────────────────────────────────────
+// ─── Topics ──────────────────────────────────────────────────────────────────
 
 String topicTelemetry() { return "jamonero/" + String(DEVICE_ID) + "/telemetry"; }
 String topicStatus()    { return "jamonero/" + String(DEVICE_ID) + "/status"; }
 String topicCommand()   { return "jamonero/" + String(DEVICE_ID) + "/command"; }
 
-// ─── Simulación de sensores ──────────────────────────────────────────────────
-// Simula un ciclo MAP: O2 baja de ~21% a ~0.5% en 10 minutos, luego se mantiene
+// ─── Sensor simulation ───────────────────────────────────────────────────────
+// Simulates a MAP cycle: O2 drops from ~21% to ~0.3% over 10 minutes, then holds
 
 float simulateO2() {
     static float o2 = 20.9;
@@ -71,26 +71,26 @@ float simulateO2() {
     return o2 + random(-5, 5) * 0.01;
 }
 
-float simulateTemp()     { return 4.0 + random(-20, 20) * 0.05; }   // 3–5°C
-float simulateHumidity() { return 75.0 + random(-50, 50) * 0.1; }   // 70–80%
+float simulateTemp()     { return 4.0 + random(-20, 20) * 0.05; }   // 3-5°C
+float simulateHumidity() { return 75.0 + random(-50, 50) * 0.1; }   // 70-80%
 
 // ─── MQTT + WiFi ─────────────────────────────────────────────────────────────
 
 WiFiClientSecure espClient;
 PubSubClient mqtt(espClient);
 unsigned long lastPublish = 0;
-const long publishInterval = 10000;  // 10 segundos
+const long publishInterval = 10000;  // 10 seconds
 
 void onCommand(char* topic, byte* payload, unsigned int length) {
     String msg = "";
     for (unsigned int i = 0; i < length; i++) msg += (char)payload[i];
-    Serial.println("CMD recibido en " + String(topic) + ": " + msg);
-    // TODO: parsear comandos (setpoint O2, inicio/fin ciclo MAP, OTA trigger)
+    Serial.println("CMD received on " + String(topic) + ": " + msg);
+    // TODO: parse commands (O2 setpoint, MAP cycle start/stop, OTA trigger)
 }
 
 void connectWifi() {
-    Serial.print("Conectando WiFi");
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);  // macros de secrets.h
+    Serial.print("Connecting WiFi");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);  // macros from secrets.h
     while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
     Serial.println("\nWiFi OK — IP: " + WiFi.localIP().toString());
 }
@@ -105,18 +105,18 @@ void connectMqtt() {
     String willTopic = topicStatus();
     String willMsg = "{\"online\":false,\"device_id\":\"" + String(DEVICE_ID) + "\"}";
 
-    Serial.print("Conectando a HiveMQ");
+    Serial.print("Connecting to HiveMQ");
     while (!mqtt.connected()) {
         if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS,
                          willTopic.c_str(), 1, true, willMsg.c_str())) {
             Serial.println(" OK");
-            // Publicar estado online
+            // Publish online status
             String onlineMsg = "{\"online\":true,\"device_id\":\"" + String(DEVICE_ID) + "\"}";
             mqtt.publish(willTopic.c_str(), onlineMsg.c_str(), true);
-            // Suscribirse a comandos
+            // Subscribe to commands
             mqtt.subscribe(topicCommand().c_str(), 1);
         } else {
-            Serial.print(" Fallo (rc=" + String(mqtt.state()) + "), reintento en 5s");
+            Serial.print(" Failed (rc=" + String(mqtt.state()) + "), retrying in 5s");
             delay(5000);
         }
     }
@@ -134,16 +134,16 @@ void publishTelemetry() {
 
     char buffer[512];
     serializeJson(doc, buffer);
-    mqtt.publish(topicTelemetry().c_str(), buffer, false);  // QoS 0 para telemetría frecuente
+    mqtt.publish(topicTelemetry().c_str(), buffer, false);  // QoS 0 for high-frequency telemetry
     Serial.println("TX → " + String(buffer));
 }
 
-// ─── Arduino loop ─────────────────────────────────────────────────────────────
+// ─── Arduino loop ────────────────────────────────────────────────────────────
 
 void setup() {
     Serial.begin(115200);
     delay(500);
-    Serial.println("\n=== Jamonero × HiveMQ POC ===");
+    Serial.println("\n=== MAP HoReCa Device × HiveMQ POC ===");
     connectWifi();
     connectMqtt();
 }
